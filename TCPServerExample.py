@@ -15,7 +15,7 @@ print("[*] Listening on {}:{}".format(bind_ip, bind_port))
 #client-handling thread
 def handlingClient(client_socket):
     request = client_socket.recv(1024)
-    print("[*] Recieved: {}".format(request))
+    print("[*] Recieved: {}".format(request.decode()))
 
     #send back a response
     client_socket.send("ACKNOWLEDGE".encode())
