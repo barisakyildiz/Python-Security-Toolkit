@@ -23,8 +23,6 @@ def usage():
     print ("-e --execute=file_to_run - execute the given file upon receiving a connection")
     print ("-c --command - initialize a command shell")
     print ("-u --upload=destination - upon receiving connection upload a file and write to [destination]")
-    print
-    print
     print ("Examples: ")
     print ("notNCAT.py -t 192.168.0.1 -p 5555 -l -c")
     print ("notNCAT.py -t 192.168.0.1 -p 5555 -l -u=c:\\target.exe")
