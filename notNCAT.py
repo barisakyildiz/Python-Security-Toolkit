@@ -32,7 +32,7 @@ def usage():
     print ("echo 'ABCDEFGHI' | ./notNCAT.py -t 192.168.11.12 -p 135")
     sys.exit(0)
 
-def client_sender(buffer):
+def clientSender(buffer):
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     try:
@@ -64,7 +64,86 @@ def client_sender(buffer):
     except Exception as e:
         print("[*] Exception Occured: {} \nExiting.".format(e))
         client.close()
-    
+
+def serverLoop():
+    global target
+
+    #if no target is given, we listen on all interfaces
+    if not len(target):
+        target = "0.0.0.0"
+
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind((target, port))
+    server.listen(5)
+
+    while True:
+        client_socket, addr = server.accept()
+
+        #thread to handle the new client
+        client_thread = threading.Thread(target=clientHandler, args=(client_socket,))
+        client_thread.start()
+
+def runCommand(command):
+    #trim the newline
+    command = command.rstrip()
+
+    #run the command and get the output back
+    try:
+        output = (subprocess.check_output(command, stderr=subprocess.STDOUT, shell=True)).decode()
+    except:
+        output = "Failed to execute command.\r\n"
+    return output
+
+def clientHandler(client_socket):
+    global upload
+    global execute
+    global command
+
+    #check for upload
+    if len(upload_destination):
+        #read in all of the bytes and write to our destination
+        file_buffer = ""
+
+        #keep reading data until none is available
+
+        while True:
+            data = client_socket.recv(1024).decode()
+
+            if not data:
+                break
+            else:
+                file_buffer += data
+
+        # now we take these bytes and try to write them out
+        try:
+            file_descriptor = open(upload_destination, "wb")
+            file_descriptor.write(file_buffer)
+            file_descriptor.close()
+            
+            #ack that we wrote the file out 
+            client_socket.send(("Successfully saved file to {}\r\n".format(upload_destination)).encode())
+        except Exception as e:
+            client_socket.send(("Failed to save file to {}\r\n".format(upload_destination)).encode())
+
+    #check for command execution
+    if len(execute):
+        #run the command
+        output = runCommand(execute)
+        client_socket.send(output)
+
+    if command:
+        while True:
+            client_socket.send("<notNCAT:#> ".encode())
+
+            #now we recieve until we see a linefeed
+            cmd_buffer = ""
+            while "\n" not in cmd_buffer:
+                cmd_buffer += (client_socket.recv(1024)).decode()
+
+            response = runCommand(cmd_buffer)
+
+            #send back the response
+            client_socket.send(response.encode())  
 
 def main():
     global listen
@@ -111,9 +190,9 @@ def main():
         buffer = sys.stdin.read()
 
         # send data off
-        client_sender(buffer)
+        clientSender(buffer)
 
     if listen:
-        server_loop()
+        serverLoop()
 
 main()
